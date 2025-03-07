@@ -1,13 +1,11 @@
 import heapq
 import random
-import threading
 import time
 
 class StockTradingEngine:
     def __init__(self):
         # Dictionary for each ticker symbol: {'BUY': max_heap, 'SELL': min_heap}
         self.order_book = {ticker: {'BUY': [], 'SELL': []} for ticker in self.generate_tickers()}
-        self.lock = threading.Lock()  # Ensures thread-safe order execution
 
     def generate_tickers(self):
         # Generate 1,024 stock tickers like "STK1", "STK2", ..., "STK1024"
@@ -15,11 +13,10 @@ class StockTradingEngine:
 
     def add_order(self, order_type, ticker, quantity, price):
         """Handles a new order and attempts to match it."""
-        with self.lock:
-            if order_type == "BUY":
-                self.match_order(ticker, quantity, price, is_buy=True)
-            else:  # SELL order
-                self.match_order(ticker, quantity, price, is_buy=False)
+        if order_type == "BUY":
+            self.match_order(ticker, quantity, price, is_buy=True)
+        else:  # SELL order
+            self.match_order(ticker, quantity, price, is_buy=False)
 
     def match_order(self, ticker, quantity, price, is_buy):
         """Attempts to match the order; if no match, adds it to the book."""
@@ -52,21 +49,22 @@ class StockTradingEngine:
     def simulate_trading(self, num_orders=100):
         """Simulates stock trading with random buy/sell orders."""
         tickers = self.generate_tickers()
+        orders = []
         for _ in range(num_orders):
             order_type = random.choice(["BUY", "SELL"])
             ticker = random.choice(tickers)
             quantity = random.randint(1, 100)  # Random quantity between 1 and 100
             price = round(random.uniform(10, 500), 2)  # Price between $10 and $500
-
-            self.add_order(order_type, ticker, quantity, price)
+            
+            orders.append((order_type, ticker, quantity, price))
+        
+        for order in orders:
+            self.add_order(*order)
             time.sleep(random.uniform(0.1, 0.5))  # Simulate real-time trading delays
 
 
 # Example Usage
 if __name__ == "__main__":
     trading_engine = StockTradingEngine()
-    
-    # Start simulation in a separate thread
-    trading_thread = threading.Thread(target=trading_engine.simulate_trading, args=(50,))
-    trading_thread.start()
-    trading_thread.join()
+    trading_engine.simulate_trading(50)  # Run sequentially without threads
+
